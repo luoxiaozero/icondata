@@ -719,7 +719,7 @@ impl PackageType {
                 package_name: Cow::Borrowed("Fluent UI System Icons"),
                 licenses: &[Cow::Borrowed("MIT")],
                 source: PackageSource::Git {
-                    url: Cow::Borrowed("https://github.com/microsoft/fluentui-system-icons"),
+                    url: Cow::Borrowed("git@github.com:microsoft/fluentui-system-icons.git"),
                     target: GitTarget::Tag {
                         name: Cow::Borrowed("1.1.239"),
                         version: SemVer {

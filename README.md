@@ -29,6 +29,7 @@ but must only be taken as a hint. Please check the individual icon repositories 
 | Charm | 0.18.0 | Git: <https://github.com/jaynewey/charm-icons> - Tag: v0.18.0 | MIT,  | icondata_ch |
 | Font Awesome | 6.4.2 | Git: <https://github.com/FortAwesome/Font-Awesome> - Tag: 6.4.2 | CC BY 4.0,  | icondata_fa |
 | Feather | 4.29.1 | Git: <https://github.com/feathericons/feather> - Tag: v4.29.1 | MIT,  | icondata_fi |
+| Fluent UI System Icons | 1.1.239 | Git: <git@github.com:microsoft/fluentui-system-icons.git> - Tag: 1.1.239 | MIT,  | icondata_fl |
 | Heroicons | 2.0.18 | Git: <https://github.com/refactoringui/heroicons> - Tag: v2.0.18 | MIT,  | icondata_hi |
 | IcoMoon Free | unknown | Git: <https://github.com/Keyamoon/IcoMoon-Free> - Branch: master - Commit: d006795ede82361e1bac1ee76f215cf1dc51e4ca | CC BY 4.0, GPL,  | icondata_im |
 | Ionicons | 7.1.2 | Git: <https://github.com/ionic-team/ionicons> - Tag: v7.1.2 | MIT,  | icondata_io |
@@ -58,4 +59,4 @@ cargo install just
 
 ## Contributing
 Contributions are more than welcomed!
-Do not hesitate add icon libraries, features, etc.
+Do not hesitate add icon libraries, features, etc.

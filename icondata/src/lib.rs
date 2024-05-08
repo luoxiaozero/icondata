@@ -33,6 +33,7 @@ pub use icondata_cg::*;
 pub use icondata_ch::*;
 pub use icondata_fa::*;
 pub use icondata_fi::*;
+pub use icondata_fl::*;
 pub use icondata_hi::*;
 pub use icondata_im::*;
 pub use icondata_io::*;

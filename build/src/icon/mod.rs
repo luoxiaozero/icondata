@@ -32,11 +32,15 @@ impl SvgIcon {
         }
 
         let name = feature_name(
-                raw_name,
-                size_from_name.or(size),
-                &categories,
-                &package.meta.short_name,
-            );
+            raw_name,
+            size_from_name.or(size),
+            if package.ty != PackageType::FluentUISystemIcons {
+                Some(&categories)
+            } else {
+                None
+            },
+            &package.meta.short_name,
+        );
 
         let svg = tokio::fs::read_to_string(path).await?;
 
@@ -111,14 +115,16 @@ impl FromStr for IconSize {
 pub(crate) fn feature_name(
     raw_name: &str,
     size: Option<IconSize>,
-    categories: &[Category],
+    categories: Option<&[Category]>,
     package_short_name: &str,
 ) -> String {
     let mut name = String::with_capacity(
         package_short_name.len()
             + 1
             + raw_name.len()
-            + categories.iter().map(|it| it.0.len() + 1).sum::<usize>()
+            + categories.map_or(0, |cats| {
+                cats.iter().map(|it| it.0.len() + 1).sum::<usize>()
+            })
             + size.map(|it| it.as_str().len() + 1).unwrap_or(0),
     );
 
@@ -128,10 +134,12 @@ pub(crate) fn feature_name(
     name.push_str(raw_name);
     name.push(' ');
 
-    categories.iter().for_each(|category| {
-        name.push_str(&category.0);
-        name.push(' ');
-    });
+    if let Some(categories) = categories {
+        categories.iter().for_each(|category| {
+            name.push_str(&category.0);
+            name.push(' ');
+        });
+    }
 
     if let Some(size) = size {
         name.push_str(size.as_str());
