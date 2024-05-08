@@ -24,21 +24,13 @@ impl SvgIcon {
     ) -> Result<Self> {
         let file_stem = path.file_stem().unwrap().to_string_lossy(); // TODO: Error handling\
 
-        let (raw_name, size_from_name, cats_from_name) =
-            parse_raw_icon_name(package.ty, &file_stem);
-
-        if let Some(mut cats_from_name) = cats_from_name {
-            categories.append(&mut cats_from_name);
-        }
+        let (raw_name, size_from_name) =
+            parse_raw_icon_name(package.ty, &file_stem, &mut categories);
 
         let name = feature_name(
             raw_name,
             size_from_name.or(size),
-            if package.ty != PackageType::FluentUISystemIcons {
-                Some(&categories)
-            } else {
-                None
-            },
+            &categories,
             &package.meta.short_name,
         );
 
@@ -115,16 +107,14 @@ impl FromStr for IconSize {
 pub(crate) fn feature_name(
     raw_name: &str,
     size: Option<IconSize>,
-    categories: Option<&[Category]>,
+    categories: &[Category],
     package_short_name: &str,
 ) -> String {
     let mut name = String::with_capacity(
         package_short_name.len()
             + 1
             + raw_name.len()
-            + categories.map_or(0, |cats| {
-                cats.iter().map(|it| it.0.len() + 1).sum::<usize>()
-            })
+            + categories.iter().map(|it| it.0.len() + 1).sum::<usize>()
             + size.map(|it| it.as_str().len() + 1).unwrap_or(0),
     );
 
@@ -134,12 +124,10 @@ pub(crate) fn feature_name(
     name.push_str(raw_name);
     name.push(' ');
 
-    if let Some(categories) = categories {
-        categories.iter().for_each(|category| {
-            name.push_str(&category.0);
-            name.push(' ');
-        });
-    }
+    categories.iter().for_each(|category| {
+        name.push_str(&category.0);
+        name.push(' ');
+    });
 
     if let Some(size) = size {
         name.push_str(size.as_str());
@@ -149,10 +137,11 @@ pub(crate) fn feature_name(
     name.to_pascal_case()
 }
 
-pub(crate) fn parse_raw_icon_name(
+pub(crate) fn parse_raw_icon_name<'a>(
     package: PackageType,
-    file_stem: &str,
-) -> (&str, Option<IconSize>, Option<Vec<Category>>) {
+    file_stem: &'a str,
+    categories: &mut Vec<Category>,
+) -> (&'a str, Option<IconSize>) {
     match package {
         // octoicons: size suffix e.g: '-24.svg'
         PackageType::GithubOcticons => {
@@ -160,12 +149,12 @@ pub(crate) fn parse_raw_icon_name(
             let name = file_stem
                 .trim_end_matches(char::is_numeric)
                 .trim_end_matches('-');
-            (name, size, None)
+            (name, size)
         }
         // Weather icons: 'wi-' prefix
         PackageType::WeatherIcons => {
             let name = file_stem.trim_start_matches("wi-");
-            (name, None, None)
+            (name, None)
         }
         // Box icons: logos: 'bxl-', regular:  'bx-', solid: 'bxs-' prefixes
         PackageType::BoxIcons => {
@@ -173,12 +162,12 @@ pub(crate) fn parse_raw_icon_name(
                 .trim_start_matches("bxl-")
                 .trim_start_matches("bx-")
                 .trim_start_matches("bxs-");
-            (name, None, None)
+            (name, None)
         }
         // Icomoon icons: numbered '001-xxxxxx'
         PackageType::IcoMoonFree => {
             let name = file_stem.trim_start_matches(char::is_numeric);
-            (name, None, None)
+            (name, None)
         }
         PackageType::RemixIcon => {
             let mut name = file_stem;
@@ -190,12 +179,34 @@ pub(crate) fn parse_raw_icon_name(
                 name = name.trim_end_matches("-line");
                 cats.push(Category("line".to_string()));
             }
-            (name, None, if cats.is_empty() { None } else { Some(cats) })
+
+            if !cats.is_empty() {
+                categories.append(&mut cats);
+            }
+
+            (name, None)
         }
         PackageType::FluentUISystemIcons => {
             let name = file_stem.trim_start_matches("ic_fluent_");
-            (name, None, None)
+
+            static LANGS: &[&'static str] = &[
+                "ar", "bg", "ca", "da", "de", "en", "es", "et", "eu", "fi", "fr", "gl", "gr", "he",
+                "hu", "it", "ja", "kk", "ko", "lt", "lv", "ms", "no", "pt", "ru", "se", "sl", "sr",
+                "sr-cyrl", "sr-latn", "sv", "tr", "uk", "zh", "LTR", "RTL",
+            ];
+
+            categories.retain(|cat| {
+                if LANGS.contains(&cat.0.as_str()) {
+                    true
+                } else if cat.0.ends_with("Temp LTR") || cat.0.ends_with("Temp RTL") {
+                    true
+                } else {
+                    false
+                }
+            });
+
+            (name, None)
         }
-        _ => (file_stem, None, None),
+        _ => (file_stem, None),
     }
 }

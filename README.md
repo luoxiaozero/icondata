@@ -59,4 +59,4 @@ cargo install just
 
 ## Contributing
 Contributions are more than welcomed!
-Do not hesitate add icon libraries, features, etc.
+Do not hesitate add icon libraries, features, etc.

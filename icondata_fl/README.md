@@ -7,4 +7,4 @@ Visit this [repository](https://github.com/Carlosted/icondata) for in-depth info
 ## Contributing
 
 Contributions are more than welcomed!
-Do not hesitate add icon libraries, features, etc.
+Do not hesitate add icon libraries, features, etc.
