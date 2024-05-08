@@ -173,6 +173,7 @@ pub enum PackageType {
     GithubOcticons,
     Lucide,
     Charm,
+    FluentUISystemIcons,
 }
 
 #[derive(Debug, Clone)]
@@ -713,6 +714,33 @@ impl PackageType {
                     build: None,
                 },
             },
+            PackageType::FluentUISystemIcons => PackageMetadata {
+                short_name: Cow::Borrowed("fl"),
+                package_name: Cow::Borrowed("Fluent UI System Icons"),
+                licenses: &[Cow::Borrowed("MIT")],
+                source: PackageSource::Git {
+                    url: Cow::Borrowed("https://github.com/microsoft/fluentui-system-icons"),
+                    target: GitTarget::Tag {
+                        name: Cow::Borrowed("1.1.239"),
+                        version: SemVer {
+                            major: 1,
+                            minor: 1,
+                            patch: 239,
+                            prerelease: None,
+                            build: None,
+                        },
+                    },
+                },
+                download_dir: Cow::Borrowed("fluentui-system-icons"),
+                svg_dir: Cow::Borrowed("assets"),
+                crate_version: SemVer {
+                    major: 0,
+                    minor: 0,
+                    patch: 10,
+                    prerelease: None,
+                    build: None,
+                },
+            }
         }
     }
 }

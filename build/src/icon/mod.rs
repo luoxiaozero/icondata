@@ -184,6 +184,10 @@ pub(crate) fn parse_raw_icon_name(
             }
             (name, None, if cats.is_empty() { None } else { Some(cats) })
         }
+        PackageType::FluentUISystemIcons => {
+            let name = file_stem.trim_start_matches("ic_fluent_");
+            (name, None, None)
+        }
         _ => (file_stem, None, None),
     }
 }
