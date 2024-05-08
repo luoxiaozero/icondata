@@ -4,7 +4,7 @@ use tracing::{debug, instrument, trace, warn};
 
 use crate::{
     icon::{Category, IconSize, SvgIcon},
-    package::Package,
+    package::{Package, PackageType},
 };
 
 use super::Unknown;
@@ -78,10 +78,29 @@ pub(crate) async fn read_icons(
             match entry_path.extension() {
                 Some(file_extension) => match file_extension.to_str() {
                     Some(file_extension) => match file_extension {
-                        "svg" => icons.push(
-                            SvgIcon::new(package, &entry_path, icon_size, categories.clone())
-                                .await?,
-                        ),
+                        "svg" => {
+                            if package.ty == PackageType::FluentUISystemIcons {
+                                if categories.len() != 2 {
+                                    continue;
+                                }
+                                if categories.iter().any(|cat| {
+                                    cat.0.ends_with("Temp LTR") || cat.0.ends_with("Temp RTL")
+                                }) {
+                                    continue;
+                                }
+                                let file_stem = entry_path.file_stem().unwrap().to_string_lossy();
+                                if !(file_stem.ends_with("20_regular")
+                                    || file_stem.ends_with("20_filled"))
+                                {
+                                    continue;
+                                }
+                            }
+
+                            icons.push(
+                                SvgIcon::new(package, &entry_path, icon_size, categories.clone())
+                                    .await?,
+                            );
+                        }
                         _ => trace!(
                             ?entry_path,
                             file_extension,
