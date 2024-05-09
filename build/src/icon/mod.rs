@@ -35,13 +35,17 @@ impl SvgIcon {
         );
 
         let svg = tokio::fs::read_to_string(path).await?;
-
-        Ok(SvgIcon {
-            svg: ParsedSvg::parse(
+        let svg = if package.ty == PackageType::FluentUISystemIcons {
+            ParsedSvg::parse_fluentui_system_icons(svg.as_bytes())
+        } else {
+            ParsedSvg::parse(
                 svg.as_bytes(),
                 categories.contains(&Category("twotone".to_string())),
             )
-            .with_context(|| {
+        };
+
+        Ok(SvgIcon {
+            svg: svg.with_context(|| {
                 format!(
                     "Error parsing icon: {} from package: {}, with path: {:?}",
                     &name,

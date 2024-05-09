@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
-use std::str::from_utf8;
+use std::str::{from_utf8, FromStr};
 use std::{borrow::Cow, collections::HashMap};
 use tracing::warn;
 use xml::attribute::Attribute;
 use xml::common::XmlVersion;
-use xml::name::Name;
+use xml::name::{Name, OwnedName};
 use xml::namespace::Namespace;
 use xml::{attribute::OwnedAttribute, EmitterConfig, ParserConfig};
 
@@ -261,6 +261,154 @@ impl ParsedSvg {
                 style: svg_style,
                 role: svg_role,
                 unknown_attributes: unknown_svg_attributes,
+            },
+        })
+    }
+
+    pub(crate) fn parse_fluentui_system_icons<R: std::io::Read>(
+        icon_content: R,
+    ) -> Result<ParsedSvg> {
+        let parser_config = ParserConfig {
+            trim_whitespace: true,
+            whitespace_to_characters: false,
+            cdata_to_characters: false,
+            ignore_comments: true,
+            coalesce_characters: false,
+            extra_entities: HashMap::new(),
+            ignore_end_of_stream: false,
+            replace_unknown_entity_references: true,
+            ignore_root_level_whitespace: true,
+        };
+
+        let emitter_config = EmitterConfig {
+            line_separator: "\n".into(),
+            indent_string: "  ".into(),
+            perform_indent: true,
+            perform_escaping: true,
+            write_document_declaration: false,
+            normalize_empty_elements: true,
+            cdata_to_characters: false,
+            keep_element_names_stack: true,
+            autopad_comments: true,
+            pad_self_closing: true,
+        };
+
+        let reader = parser_config.create_reader(icon_content);
+        let mut writer = emitter_config.create_writer(Vec::new());
+
+        let mut xml_attributes = None;
+        let mut svg_namespace = None;
+        let mut svg_view_box = None;
+
+        for event in reader.into_iter() {
+            let event = event.map_err(|err| anyhow!("Error reading XML event: {err}"))?;
+            match event {
+                xml::reader::XmlEvent::StartDocument {
+                    version,
+                    encoding,
+                    standalone: _,
+                } => {
+                    xml_attributes = Some(XmlAttributes { version, encoding });
+                }
+                xml::reader::XmlEvent::EndDocument => {}
+                xml::reader::XmlEvent::StartElement {
+                    name,
+                    attributes,
+                    namespace,
+                } if name.local_name == "svg" => {
+                    svg_namespace = Some(namespace);
+                    for attr in attributes {
+                        match attr.name.local_name.as_ref() {
+                            "viewBox" => {
+                                svg_view_box = Some(attr);
+                                break;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                xml::reader::XmlEvent::EndElement { name } if name.local_name == "svg" => {
+                    break;
+                }
+                event => {
+                    let event = event.as_writer_event().unwrap();
+                    match event {
+                        xml::writer::XmlEvent::StartElement {
+                            name,
+                            attributes,
+                            namespace: _,
+                        } if name.local_name == "path" => {
+                            let mut attributes = attributes.into_owned();
+                            for attr in attributes.iter_mut() {
+                                match attr.name.local_name.as_ref() {
+                                    "fill" => {
+                                        attr.value = "currentColor";
+                                        break;
+                                    }
+                                    _ => {}
+                                }
+                            }
+
+                            writer
+                                .write(xml::writer::XmlEvent::StartElement {
+                                    name,
+                                    attributes: attributes.into(),
+                                    // namespace will be non empty, when the initially read svg element contained that information.
+                                    // We are only writing the inner parts of an svg (we reconstruct an <svg> element around that later)
+                                    // and therefore do not want namespace information to be emitted on any child element.
+                                    namespace: Cow::Owned(Namespace::empty()),
+                                })
+                                .map_err(|err| anyhow!("Error writing XML event: {err}"))?
+                        }
+                        xml::writer::XmlEvent::EndElement { name: Some(name) }
+                            if name.local_name == "path" =>
+                        {
+                            writer
+                                .write(xml::writer::XmlEvent::EndElement { name: Some(name) })
+                                .map_err(|err| anyhow!("Error writing XML event: {err}"))?;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        Ok(ParsedSvg {
+            // On Windows systems, a small percentage of icons might be rendered with "&#xD;&#xA;" instead of "&#xA;".
+            // This seems to happens when the svg file contained windows-style line breaks.
+            // TODO: Find a better way of ensuring consistent output across different system architectures.
+            // TODO: We are using `EmitterConfig::default().line_separator("\n")`, which does not help on its own. Why?
+            content: from_utf8(writer.inner_mut())?
+                .to_owned()
+                .replace("&#xD;&#xA;", "\n")
+                .replace("&#xA;", "\n"),
+            xml_attributes: xml_attributes.expect("present"),
+            svg_attributes: SvgAttributes {
+                namespace: svg_namespace.expect("present"),
+                version: None,
+                class: None,
+                x: None,
+                y: None,
+                width: Some(OwnedAttribute::new(
+                    OwnedName::from_str("width").unwrap(),
+                    "1em",
+                )),
+                height: Some(OwnedAttribute::new(
+                    OwnedName::from_str("height").unwrap(),
+                    "1em",
+                )),
+                view_box: svg_view_box,
+                stroke_linecap: None,
+                stroke_linejoin: None,
+                stroke_width: None,
+                stroke: Some(OwnedAttribute::new(
+                    OwnedName::from_str("stroke").unwrap(),
+                    "currentColor",
+                )),
+                fill: None,
+                style: None,
+                role: None,
+                unknown_attributes: Vec::new(),
             },
         })
     }
